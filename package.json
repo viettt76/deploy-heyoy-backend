@@ -1,0 +1,48 @@
+{
+    "name": "backend",
+    "version": "0.0.1",
+    "description": "Awesome project developed with TypeORM.",
+    "scripts": {
+        "dev": "cross-env BUILD_MODE=dev nodemon --watch src --exec ts-node src/server.ts",
+        "start": "NODE_OPTIONS='--max_old_space_size=2048' cross-env BUILD_MODE=production ts-node src/server.ts",
+        "seed:run": "ts-node src/seed/seed.ts",
+        "typeorm": "npx typeorm-ts-node-commonjs",
+        "migration:generate": "npm run typeorm migration:generate -- -d src/data-source.ts",
+        "migration:run": "npm run typeorm migration:run -- -d src/data-source.ts",
+        "migration:revert": "npm run typeorm migration:revert",
+        "drop-schema": "npm run typeorm schema:drop -- -d src/data-source.ts",
+        "build": "tsc",
+        "ts-check": "tsc --project tsconfig.json"
+    },
+    "dependencies": {
+        "bcrypt": "^5.1.1",
+        "cookie": "^1.0.2",
+        "cookie-parser": "^1.4.6",
+        "cors": "^2.8.5",
+        "dotenv": "^16.4.5",
+        "express": "^4.19.2",
+        "express-async-errors": "^3.1.1",
+        "joi": "^17.13.3",
+        "jsonwebtoken": "^9.0.2",
+        "livekit-server-sdk": "^2.10.2",
+        "mysql2": "^3.10.3",
+        "redis": "^4.7.0",
+        "reflect-metadata": "^0.2.2",
+        "socket.io": "^4.7.5",
+        "typeorm": "^0.3.20"
+    },
+    "devDependencies": {
+        "@types/bcrypt": "^5.0.2",
+        "@types/cookie-parser": "^1.4.8",
+        "@types/express": "^5.0.0",
+        "@types/jsonwebtoken": "^9.0.7",
+        "@types/node": "^22.10.7",
+        "cross-env": "^7.0.3",
+        "nodemon": "^3.1.4",
+        "pre-commit": "^1.2.2",
+        "rimraf": "^6.0.1",
+        "ts-node": "^10.9.2",
+        "tsconfig-paths": "^4.2.0",
+        "typescript": "^5.7.3"
+    }
+}

@@ -1,0 +1,53 @@
+[
+    {
+        "firstName": "Việt",
+        "lastName": "Hoàng",
+        "username": "hoangviet"
+    },
+    {
+        "firstName": "Vân",
+        "lastName": "Nguyễn",
+        "username": "nguyenvan"
+    },
+    {
+        "firstName": "Linh",
+        "lastName": "Vũ",
+        "username": "vulinh"
+    },
+    {
+        "firstName": "Huy",
+        "lastName": "Nguyễn",
+        "username": "nguyenhuy"
+    },
+    {
+        "firstName": "Thái",
+        "lastName": "Trần",
+        "username": "tranthai"
+    },
+    {
+        "firstName": "Anh",
+        "lastName": "Ngô",
+        "username": "ngoanh"
+    },
+    {
+        "firstName": "Long",
+        "lastName": "Hoàng",
+        "username": "hoanglong"
+    },
+    {
+        "firstName": "Lan",
+        "lastName": "Ngọc",
+        "username": "ngoclan"
+    },
+    {
+        "firstName": "Thảo",
+        "lastName": "Bùi",
+        "username": "buithao"
+    },
+    {
+        "firstName": "Admin",
+        "lastName": "",
+        "username": "admin",
+        "role": "ADMIN"
+    }
+]
