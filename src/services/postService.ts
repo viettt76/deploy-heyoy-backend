@@ -125,6 +125,7 @@ class PostService {
             .offset((page - 1) * pageSize.posts)
             .limit(pageSize.posts)
             .groupBy('post.id')
+            .addGroupBy('bookmark.id')
             .orderBy('post.createdAt', 'DESC')
             .getRawMany();
 
@@ -347,6 +348,7 @@ class PostService {
             .where('comment.postId = :postId', { postId })
             .andWhere('comment.parentCommentId IS NULL')
             .groupBy('comment.id')
+            .addGroupBy('reply.id')
             .orderBy(`comment.${sortField ?? 'createdAt'}`, sortType ?? 'DESC')
             .offset((page - 1) * pageSize.comments)
             .limit(pageSize.comments)
@@ -638,52 +640,6 @@ class PostService {
             .groupBy('post.id')
             .orderBy('post.createdAt', 'DESC')
             .getRawMany();
-
-        // const posts = await bookmarkPostRepository
-        //     .createQueryBuilder('bookmark')
-        //     .innerJoin(Post, 'post', 'bookmark.postId = post.id')
-        //     // .leftJoinAndSelect(ImageOfPost, 'image', 'image.postId = post.id')
-        //     // .innerJoin(User, 'poster', 'poster.id = post.poster')
-        //     // .leftJoin(
-        //     //     (qb) =>
-        //     //         qb
-        //     //             .from(Comment, 'c')
-        //     //             .select('c.postId', 'postId')
-        //     //             .addSelect('COUNT(*)', 'totalComments')
-        //     //             .groupBy('c.postId'),
-        //     //     'commentCount',
-        //     //     'commentCount.postId = post.id',
-        //     // )
-        //     .select([
-        //         'post.id as postId',
-        //         'post.posterId as posterId',
-        //         // 'poster.firstName as posterFirstName',
-        //         // 'poster.lastName as posterLastName',
-        //         // 'poster.avatar as posterAvatar',
-        //         'post.visibilityType as visibilityType',
-        //         'post.content as content',
-        //         'post.createdAt as createdAt',
-        //         // "CONCAT('[', GROUP_CONCAT(JSON_OBJECT('id', image.id, 'imageUrl', image.imageUrl)), ']') as images",
-        //     ])
-        //     // .addSelect((qb) => {
-        //     //     return qb
-        //     //         .subQuery()
-        //     //         .from(PostReaction, 'pr')
-        //     //         .select('pr.reactionType')
-        //     //         .where('pr.userId = :userId AND pr.postId = post.id', {
-        //     //             userId,
-        //     //         });
-        //     // }, 'currentReactionType')
-        //     // .addSelect('COALESCE(commentCount.totalComments, 0)', 'commentsCount')
-        //     .where('bookmark.userId = :userId', { userId })
-        //     .andWhere('post.status != :postStatus', { postStatus: PostStatus.INVALID })
-        //     .offset((page - 1) * pageSize.posts)
-        //     .limit(pageSize.posts)
-        //     .groupBy('post.id')
-        //     .orderBy('post.createdAt', 'DESC')
-        //     .getRawMany();
-
-        console.log(posts);
 
         const result = await Promise.all(
             posts.map(async (post) => {
