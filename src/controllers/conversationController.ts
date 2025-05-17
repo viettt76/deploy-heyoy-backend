@@ -279,8 +279,9 @@ class ConversationController {
 
         const participantIds = participants.map((p: any) => p.userId);
         await conversationService.addGroupMembers({ conversationId, participantIds });
+
         participantIds.map((p: any) => {
-            io.to(`user-${p.userId}`).emit('addedToGroup');
+            io.to(`user-${p}`).emit('addedToGroup');
         });
         prevMembers.map((m) => {
             io.to(`user-${m.userId}`).emit(
@@ -293,6 +294,23 @@ class ConversationController {
         });
 
         return res.status(httpStatusCode.CREATED).json();
+    }
+
+    // [DELETE] /conversations/members/:conversationId
+    async outGroup(req: Request, res: Response): Promise<any> {
+        const { id } = req.userToken as CustomJwtPayload;
+        const { conversationId } = req.params;
+        const { io } = req as IoRequest;
+
+        await conversationService.deleteGroupMember({ conversationId, userId: id });
+
+        const prevMembers = await conversationService.getParticipants(conversationId);
+        prevMembers.map((p) => {
+            io.to(`user-${p.userId}`).emit('reduceMemberToGroup', id);
+        });
+        io.to(`user-${id}`).emit('outGroupChat', conversationId);
+
+        return res.status(httpStatusCode.OK).json();
     }
 
     // [POST] /conversations/messages/read/:conversationId'

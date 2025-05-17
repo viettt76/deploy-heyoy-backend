@@ -45,7 +45,7 @@ AppDataSource.initialize()
                 fn(req, res, next).catch(next);
             };
 
-        app.use(wrapAsync(authMiddleware));
+        app.use(wrapAsync((req, res, next) => authMiddleware(req, res, next, io)));
 
         events(io);
         routes(app, io);

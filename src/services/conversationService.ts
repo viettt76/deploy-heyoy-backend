@@ -208,7 +208,14 @@ class ConversationService {
     async getRecentConversations({ userId, page }: { userId: string; page: number }): Promise<any[]> {
         return await conversationRepository
             .createQueryBuilder('conversation')
-            .innerJoin(ConversationParticipant, 'cp1', 'cp1.conversationId = conversation.id')
+            .innerJoin(
+                ConversationParticipant,
+                'cp1',
+                'cp1.conversationId = conversation.id AND cp1.userId = :userId',
+                {
+                    userId,
+                },
+            )
             .leftJoinAndSelect(
                 ConversationParticipant,
                 'otherCp',
@@ -216,7 +223,6 @@ class ConversationService {
                 { userId, privateType: ConversationType.PRIVATE },
             )
             .leftJoinAndSelect('otherCp.user', 'friend')
-            .where('cp1.userId = :userId', { userId })
             .leftJoinAndSelect('conversation.history', 'history')
             .leftJoinAndSelect('history.user', 'sender')
             .leftJoinAndSelect('history.lastMessage', 'lastMessage')
@@ -239,11 +245,9 @@ class ConversationService {
                 'friend.lastName as friendLastName',
                 'friend.avatar as friendAvatar',
             ])
-            .setParameter('userId', userId)
             .offset((page - 1) * pageSize.recentConversations)
             .limit(pageSize.recentConversations)
             .orderBy('COALESCE(history.updatedAt, conversation.createdAt)', 'DESC')
-            .groupBy('history.id')
             .getRawMany();
     }
 
@@ -331,6 +335,13 @@ class ConversationService {
                 role: ConversationRole.MEMBER,
             })),
         );
+    }
+
+    async deleteGroupMember({ conversationId, userId }: { conversationId: string; userId: string }): Promise<void> {
+        await conversationParticipantRepository.delete({
+            conversationId,
+            userId,
+        });
     }
 
     async getLastMessage(conversationId: string): Promise<any> {

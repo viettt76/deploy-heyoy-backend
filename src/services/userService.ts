@@ -1,5 +1,7 @@
 import { AppDataSource } from '@/data-source';
+import { FriendRequest } from '@/entity/FriendRequest';
 import { ImageOfPost } from '@/entity/ImageOfPost';
+import { Relationship } from '@/entity/Relationship';
 import { Gender, User } from '@/entity/User';
 
 const userRepository = AppDataSource.getRepository(User);
@@ -68,11 +70,30 @@ class UserService {
     async search({ keyword, userId }: { keyword: string; userId: string }): Promise<any> {
         const queryBuilder = userRepository
             .createQueryBuilder('user')
+            .leftJoinAndSelect(
+                Relationship,
+                'relationship',
+                `(user.id = relationship.user1Id AND :userId = relationship.user2Id) 
+                    OR (user.id = relationship.user2Id AND :userId = relationship.user1Id)`,
+            )
+            .leftJoinAndSelect(
+                FriendRequest,
+                'friendRequestAsSender',
+                `user.id = friendRequestAsSender.receiverId AND :userId = friendRequestAsSender.senderId`,
+            )
+            .leftJoinAndSelect(
+                FriendRequest,
+                'friendRequestAsReceiver',
+                `user.id = friendRequestAsReceiver.senderId AND :userId = friendRequestAsReceiver.receiverId`,
+            )
             .select([
                 'user.id as userId',
                 'user.firstName as firstName',
                 'user.lastName as lastName',
                 'user.avatar as avatar',
+                'relationship.id as relationshipId',
+                'friendRequestAsSender.id as friendRequestAsSenderId',
+                'friendRequestAsReceiver.id as friendRequestAsReceiverId',
             ]);
 
         const keywords = keyword.split(' ');
@@ -87,6 +108,7 @@ class UserService {
             }
         });
         queryBuilder.andWhere('user.id != :userId', { userId });
+        queryBuilder.setParameter('userId', userId);
 
         return await queryBuilder.getRawMany();
     }

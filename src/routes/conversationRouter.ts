@@ -31,6 +31,7 @@ const conversationRouter = (io: Server) => {
         conversationValidation.addGroupMembers,
         conversationController.addGroupMembers,
     );
+    router.delete('/members/:conversationId', conversationValidation.outGroup, conversationController.outGroup);
     router.post(
         '/messages/read/:conversationId',
         conversationValidation.readMessage,

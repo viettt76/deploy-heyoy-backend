@@ -158,7 +158,7 @@ class RelationshipService {
             type: NotificationType.FRIEND_REQUEST,
             referenceId: friendRequestId,
         });
-        await relationshipRepository.insert({
+        return await relationshipRepository.save({
             user1Id: senderId,
             user2Id: userId,
         });

@@ -53,7 +53,9 @@ class RelationshipController {
             createdAt: newFriendRequestNotification.createdAt,
         });
 
-        return res.status(httpStatusCode.CREATED).json();
+        return res.status(httpStatusCode.CREATED).json({
+            friendRequestId: friendRequest.id,
+        });
     }
 
     // [GET] /relationships/friend-requests
@@ -103,12 +105,15 @@ class RelationshipController {
             });
         }
 
-        await relationshipService.addFriend({
+        const newRelationship = await relationshipService.addFriend({
             userId: id,
             senderId,
             friendRequestId,
         });
-        return res.status(httpStatusCode.CREATED).json();
+
+        return res.status(httpStatusCode.CREATED).json({
+            relationshipId: newRelationship.id,
+        });
     }
 
     // [DELETE] /relationships/friend-requests/:friendRequestId
