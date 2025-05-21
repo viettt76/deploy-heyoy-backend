@@ -39,6 +39,10 @@ AppDataSource.initialize()
 
         getRedisClient();
 
+        app.get('/', (req: Request, res: Response) => {
+            res.status(200).json('');
+        });
+
         const wrapAsync =
             (fn: (req: Request, res: Response, next: NextFunction) => Promise<any>): RequestHandler =>
             (req, res, next) => {
