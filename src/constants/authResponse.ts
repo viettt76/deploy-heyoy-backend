@@ -7,12 +7,12 @@ export const authResponse = {
     },
     ACCOUNT_DELETED: {
         status: httpStatusCode.FORBIDDEN,
-        message: 'Your account has been deleted',
+        message: 'Tài khoản của bạn đã bị xoá',
         code: 'ACCOUNT_SOFT_DELETED',
     },
     LOGIN_INCORRECT: {
         status: httpStatusCode.UNAUTHORIZED,
-        message: 'The username or password you entered is incorrect',
+        message: 'Thông tin tài khoản hoặc mật khẩu không chính xác',
     },
     INVALID_TOKEN: {
         status: httpStatusCode.UNAUTHORIZED,
@@ -36,7 +36,8 @@ export const authResponse = {
     },
     ACCOUNT_LOCKED: {
         status: httpStatusCode.FORBIDDEN,
-        message: 'Your account is locked.',
+
+        message: 'Tài khoản của bạn đã bị khoá',
         code: 'ACCOUNT_LOCKED',
     },
 };

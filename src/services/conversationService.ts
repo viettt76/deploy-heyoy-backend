@@ -208,19 +208,11 @@ class ConversationService {
     async getRecentConversations({ userId, page }: { userId: string; page: number }): Promise<any[]> {
         return await conversationRepository
             .createQueryBuilder('conversation')
-            .innerJoin(
-                ConversationParticipant,
-                'cp1',
-                'cp1.conversationId = conversation.id AND cp1.userId = :userId',
-                {
-                    userId,
-                },
-            )
+            .innerJoin(ConversationParticipant, 'cp1', 'cp1.conversationId = conversation.id AND cp1.userId = :userId')
             .leftJoinAndSelect(
                 ConversationParticipant,
                 'otherCp',
                 'otherCp.userId != :userId AND otherCp.conversationId = conversation.id AND conversation.type = :privateType',
-                { userId, privateType: ConversationType.PRIVATE },
             )
             .leftJoinAndSelect('otherCp.user', 'friend')
             .leftJoinAndSelect('conversation.history', 'history')
@@ -245,6 +237,11 @@ class ConversationService {
                 'friend.lastName as friendLastName',
                 'friend.avatar as friendAvatar',
             ])
+            .where('conversation.type != :privateType OR (friend.deletedAt IS NULL AND friend.isActive = true)')
+            .setParameters({
+                userId,
+                privateType: ConversationType.PRIVATE,
+            })
             .offset((page - 1) * pageSize.recentConversations)
             .limit(pageSize.recentConversations)
             .orderBy('COALESCE(history.updatedAt, conversation.createdAt)', 'DESC')

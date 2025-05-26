@@ -24,8 +24,18 @@ class AuthValidation {
     }
     login(req: Request, res: Response, next: NextFunction) {
         const correctValidation = Joi.object({
-            username: Joi.string().min(6).max(30).required().trim().strict().allow('admin'),
-            password: Joi.string().min(8).max(32).required().trim().strict(),
+            username: Joi.string()
+                .required()
+                .trim()
+                .strict()
+                .pattern(/^\S+$/, 'no-whitespace')
+                .allow('admin')
+                .messages({
+                    'string.pattern.name': 'Tài khoản không được chứa ký tự trắng',
+                }),
+            password: Joi.string().required().trim().strict().pattern(/^\S+$/, 'no-whitespace').messages({
+                'string.pattern.name': 'Mật khẩu không được chứa ký tự trắng',
+            }),
         });
 
         validationHandler(correctValidation, req.body, res, next);

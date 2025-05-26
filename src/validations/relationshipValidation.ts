@@ -5,6 +5,7 @@ import validationHandler from '@/utils/validationHandler';
 class RelationshipValidation {
     getSuggestions(req: Request, res: Response, next: NextFunction) {
         const correctValidation = Joi.object({
+            keyword: Joi.string().allow(''),
             page: Joi.number().min(1),
         });
 

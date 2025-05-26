@@ -57,27 +57,26 @@ class RelationshipService {
         });
     }
 
-    async getFriendRequests({
-        receiverId,
-        page,
-    }: {
-        receiverId: string;
-        page: number;
-    }): Promise<FriendRequest[] | null> {
-        return await friendRequestRepository
+    async getFriendRequests({ receiverId, page }: { receiverId: string; page: number }): Promise<any> {
+        const friendRequests = await friendRequestRepository
             .createQueryBuilder('fr')
             .innerJoin(User, 'sender', 'fr.senderId = sender.id')
-            .select([
-                'fr.id as friendRequestId',
-                'sender.id as userId',
-                'sender.firstName as firstName',
-                'sender.lastName as lastName',
-                'sender.avatar as avatar',
-            ])
+            .select(['fr.id', 'sender.id', 'sender.firstName', 'sender.lastName', 'sender.avatar'])
             .where('fr.receiverId = :receiverId', { receiverId })
             .offset((page - 1) * pageSize.friendRequests)
             .limit(pageSize.friendRequests)
-            .getRawMany();
+            .getManyAndCount();
+
+        return {
+            friendRequests: friendRequests[0].map((fq) => ({
+                friendRequestId: fq.id,
+                userId: fq.sender.id,
+                firstName: fq.sender.firstName,
+                lastName: fq.sender.lastName,
+                avatar: fq.sender.avatar,
+            })),
+            totalPages: Math.ceil(friendRequests[1] / pageSize.friendRequests),
+        };
     }
 
     async getFriendRequestCount(receiverId: string): Promise<number> {
@@ -94,52 +93,69 @@ class RelationshipService {
         });
     }
 
-    async getSuggestions({ userId, page }: { userId: string; page: number }): Promise<any> {
-        const suggestions = await userRepository
+    async getSuggestions({ userId, keyword, page }: { userId: string; keyword?: string; page: number }): Promise<any> {
+        const queryBuilder = userRepository
             .createQueryBuilder('user')
-            .select([
-                'user.id as userId',
-                'user.firstName as firstName',
-                'user.lastName as lastName',
-                'user.avatar as avatar',
-            ])
-            .where('user.id != :userId AND user.role != :adminRole', { userId, adminRole: Role.ADMIN })
-            .andWhere((qb) => {
-                const relationshipAsUser1 = qb
-                    .subQuery()
-                    .select('relationship.user1Id')
-                    .from(Relationship, 'relationship')
-                    .where('relationship.user2Id = :userId', { userId })
-                    .getQuery();
+            .select(['user.id', 'user.firstName', 'user.lastName', 'user.avatar'])
+            .where('user.id != :userId AND user.role != :adminRole', { adminRole: Role.ADMIN });
 
-                const relationshipAsUser2 = qb
-                    .subQuery()
-                    .select('relationship.user2Id')
-                    .from(Relationship, 'relationship')
-                    .where('relationship.user1Id = :userId', { userId })
-                    .getQuery();
+        if (keyword) {
+            const keywords = keyword.split(' ');
+            const keywordConditions = keywords.map(
+                (word, index) => `(user.firstName LIKE :keyword${index} OR user.lastName LIKE :keyword${index})`,
+            );
+            const keywordParams = Object.fromEntries(keywords.map((word, index) => [`keyword${index}`, `%${word}%`]));
 
-                const friendRequestAsSender = qb
-                    .subQuery()
-                    .select('friendRequest.senderId')
-                    .from(FriendRequest, 'friendRequest')
-                    .where('friendRequest.receiverId = :userId', { userId })
-                    .getQuery();
+            queryBuilder.andWhere(`(${keywordConditions.join(' OR ')})`, keywordParams);
+        }
 
-                const friendRequestAsReceiver = qb
-                    .subQuery()
-                    .select('friendRequest.receiverId')
-                    .from(FriendRequest, 'friendRequest')
-                    .where('friendRequest.senderId = :userId', { userId })
-                    .getQuery();
+        queryBuilder.andWhere((qb) => {
+            const relationshipAsUser1 = qb
+                .subQuery()
+                .select('relationship.user1Id')
+                .from(Relationship, 'relationship')
+                .where('relationship.user2Id = :userId')
+                .getQuery();
 
-                return `user.id NOT IN (${relationshipAsUser1}) AND user.id NOT IN (${relationshipAsUser2}) AND user.id NOT IN (${friendRequestAsSender}) AND user.id NOT IN (${friendRequestAsReceiver})`;
-            })
-            .offset((page - 1) * pageSize.suggestionsMakeFriend)
-            .limit(pageSize.suggestionsMakeFriend)
-            .getRawMany();
+            const relationshipAsUser2 = qb
+                .subQuery()
+                .select('relationship.user2Id')
+                .from(Relationship, 'relationship')
+                .where('relationship.user1Id = :userId')
+                .getQuery();
 
-        return suggestions;
+            const friendRequestAsSender = qb
+                .subQuery()
+                .select('friendRequest.senderId')
+                .from(FriendRequest, 'friendRequest')
+                .where('friendRequest.receiverId = :userId')
+                .getQuery();
+
+            const friendRequestAsReceiver = qb
+                .subQuery()
+                .select('friendRequest.receiverId')
+                .from(FriendRequest, 'friendRequest')
+                .where('friendRequest.senderId = :userId')
+                .getQuery();
+
+            return `user.id NOT IN (${relationshipAsUser1}) AND user.id NOT IN (${relationshipAsUser2}) AND user.id NOT IN (${friendRequestAsSender}) AND user.id NOT IN (${friendRequestAsReceiver})`;
+        });
+
+        queryBuilder.offset((page - 1) * pageSize.suggestionsMakeFriend);
+        queryBuilder.limit(pageSize.suggestionsMakeFriend);
+        queryBuilder.setParameter('userId', userId);
+
+        const suggestions = await queryBuilder.getManyAndCount();
+
+        return {
+            suggestions: suggestions[0].map((s) => ({
+                userId: s.id,
+                firstName: s.firstName,
+                lastName: s.lastName,
+                avatar: s.avatar,
+            })),
+            totalPages: Math.ceil(suggestions[1] / pageSize.suggestionsMakeFriend),
+        };
     }
 
     async addFriend({
@@ -184,21 +200,26 @@ class RelationshipService {
             .execute();
     }
 
-    async getSentFriendRequests({ senderId, page }: { senderId: string; page: number }): Promise<FriendRequest[]> {
-        return await friendRequestRepository
+    async getSentFriendRequests({ senderId, page }: { senderId: string; page: number }): Promise<any> {
+        const sentFriendRequests = await friendRequestRepository
             .createQueryBuilder('fr')
             .innerJoinAndSelect('fr.receiver', 'receiver')
-            .select([
-                'fr.id as friendRequestId',
-                'receiver.id as userId',
-                'receiver.firstName as firstName',
-                'receiver.lastName as lastName',
-                'receiver.avatar as avatar',
-            ])
+            .select(['fr.id', 'receiver.id', 'receiver.firstName', 'receiver.lastName', 'receiver.avatar'])
             .where('fr.senderId = :senderId', { senderId })
             .offset((page - 1) * pageSize.friendRequests)
             .limit(pageSize.friendRequests)
-            .getRawMany();
+            .getManyAndCount();
+
+        return {
+            sentFriendRequests: sentFriendRequests[0].map((fq) => ({
+                friendRequestId: fq.id,
+                userId: fq.receiver.id,
+                firstName: fq.receiver.firstName,
+                lastName: fq.receiver.lastName,
+                avatar: fq.receiver.avatar,
+            })),
+            totalPages: Math.ceil(sentFriendRequests[1] / pageSize.friendRequests),
+        };
     }
 
     async getRelationship({

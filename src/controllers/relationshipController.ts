@@ -12,8 +12,12 @@ class RelationshipController {
     // [GET] /relationships/suggestions
     async getSuggestions(req: Request, res: Response): Promise<any> {
         const { id } = req.userToken as CustomJwtPayload;
-        const { page } = req.query;
-        const suggestions = await relationshipService.getSuggestions({ userId: id, page: Number(page) });
+        const { keyword, page } = req.query;
+        const suggestions = await relationshipService.getSuggestions({
+            userId: id,
+            keyword: keyword?.toString(),
+            page: Number(page),
+        });
 
         return res.status(httpStatusCode.OK).json(suggestions);
     }

@@ -18,11 +18,13 @@ export const getOnlineUsers = async (): Promise<string[]> => {
 export const addOnlineFriends = async (userId: string): Promise<void> => {
     const friends = await relationshipService.getFriends(userId);
 
-    await redisClient.sAdd(
-        `friends:${userId}`,
-        friends.map((friend) => friend.id),
-    );
-    await redisClient.expire(`friends:${userId}`, 86400);
+    if (friends.length > 0) {
+        await redisClient.sAdd(
+            `friends:${userId}`,
+            friends.map((friend) => friend.id),
+        );
+        await redisClient.expire(`friends:${userId}`, 86400);
+    }
 };
 
 export const removeOnlineFriends = async (userId: string): Promise<void> => {
