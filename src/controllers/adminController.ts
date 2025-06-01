@@ -47,15 +47,13 @@ class AdminController {
 
     // [GET] /admin/users
     async getUsers(req: Request, res: Response): Promise<any> {
-        const { id } = req.userToken as CustomJwtPayload;
-        const { page } = req.query;
+        const { page, keyword } = req.query;
 
-        const [users, totalUsers] = await adminService.getUsers({ adminId: id, page: Number(page) });
+        const { users, totalPages } = await adminService.getUsers({ page: Number(page), keyword: keyword?.toString() });
 
         return res.status(httpStatusCode.OK).json({
             users,
-            totalUsers,
-            totalPages: Math.ceil(totalUsers / pageSize.manageUser),
+            totalPages,
         });
     }
 

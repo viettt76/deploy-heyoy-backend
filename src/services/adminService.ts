@@ -107,20 +107,41 @@ class AdminService {
         await postRepository.save(post);
     }
 
-    async getUsers({ adminId, page }: { adminId: string; page: number }): Promise<[User[], number]> {
-        return await userRepository.findAndCount({
-            where: { id: Not(adminId) },
-            select: {
-                id: true,
-                username: true,
-                firstName: true,
-                lastName: true,
-                role: true,
-                isActive: true,
-            },
-            take: pageSize.manageUser,
-            skip: (page - 1) * pageSize.manageUser,
-        });
+    async getUsers({ page, keyword }: { page: number; keyword?: string }): Promise<{
+        users: any[];
+        totalPages: number;
+    }> {
+        const queryBuilder = userRepository
+            .createQueryBuilder('user')
+            .select(['user.id', 'user.username', 'user.firstName', 'user.lastName', 'user.role', 'user.isActive'])
+            .where('user.role != :adminRole', { adminRole: Role.ADMIN });
+
+        if (keyword) {
+            const keywords = keyword.split(' ');
+            const keywordConditions = keywords.map(
+                (word, index) => `(user.firstName LIKE :keyword${index} OR user.lastName LIKE :keyword${index})`,
+            );
+            const keywordParams = Object.fromEntries(keywords.map((word, index) => [`keyword${index}`, `%${word}%`]));
+
+            queryBuilder.andWhere(`(${keywordConditions.join(' OR ')})`, keywordParams);
+        }
+
+        queryBuilder.offset((page - 1) * pageSize.manageUser);
+        queryBuilder.limit(pageSize.manageUser);
+
+        const users = await queryBuilder.getManyAndCount();
+
+        return {
+            users: users[0].map((u) => ({
+                id: u.id,
+                username: u.username,
+                firstName: u.firstName,
+                lastName: u.lastName,
+                role: u.role,
+                isActive: u.isActive,
+            })),
+            totalPages: Math.ceil(users[1] / pageSize.manageUser),
+        };
     }
 
     async setActiveUser({ userId, isActive }: { userId: string; isActive: boolean }): Promise<void> {

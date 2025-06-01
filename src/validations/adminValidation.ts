@@ -39,6 +39,7 @@ class AdminValidation {
     getUsers(req: Request, res: Response, next: NextFunction) {
         const correctValidation = Joi.object({
             page: Joi.number().min(1),
+            keyword: Joi.string().min(1),
         });
 
         validationHandler(correctValidation, req.query, res, next);
