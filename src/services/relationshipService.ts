@@ -57,10 +57,13 @@ class RelationshipService {
         });
     }
 
-    async getFriendRequests({ receiverId, page }: { receiverId: string; page: number }): Promise<any> {
+    async getFriendRequests({ receiverId, page }: { receiverId: string; page: number }): Promise<{
+        friendRequests: any[];
+        totalPages: number;
+    }> {
         const friendRequests = await friendRequestRepository
             .createQueryBuilder('fr')
-            .innerJoin(User, 'sender', 'fr.senderId = sender.id')
+            .innerJoinAndSelect('fr.sender', 'sender')
             .select(['fr.id', 'sender.id', 'sender.firstName', 'sender.lastName', 'sender.avatar'])
             .where('fr.receiverId = :receiverId', { receiverId })
             .offset((page - 1) * pageSize.friendRequests)
@@ -229,14 +232,21 @@ class RelationshipService {
         currentUserId: string;
         targetUserId: string;
     }): Promise<string | null> {
-        const fq = await friendRequestRepository.findOne({
-            where: [
-                { senderId: currentUserId, receiverId: targetUserId },
-                { senderId: targetUserId, receiverId: currentUserId },
-            ],
-        });
+        const fq = await friendRequestRepository
+            .createQueryBuilder('fq')
+            .select(
+                `CASE WHEN fq.senderId = :currentUserId THEN 'FRIEND_REQUEST_AS_SENDER' ELSE 'FRIEND_REQUEST_AS_RECEIVER' END`,
+                'friendRequest',
+            )
+            .where('fq.senderId = :currentUserId AND fq.receiverId = :targetUserId')
+            .orWhere('fq.senderId = :targetUserId AND fq.receiverId = :currentUserId')
+            .setParameters({
+                currentUserId,
+                targetUserId,
+            })
+            .getRawOne();
 
-        if (fq) return 'FRIEND_REQUEST';
+        if (fq) return fq.friendRequest;
 
         const friend = await relationshipRepository.findOne({
             where: [

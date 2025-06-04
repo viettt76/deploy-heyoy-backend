@@ -127,14 +127,14 @@ class RelationshipController {
         const friendRequest = await relationshipService.getFriendRequestById(friendRequestId);
 
         if (!friendRequest) {
-            return res.status(relationshipResponse.ALREADY_FRIENDS.status).json({
-                message: relationshipResponse.ALREADY_FRIENDS.message,
+            return res.status(httpStatusCode.BAD_REQUEST).json({
+                message: 'Có lỗi xảy ra, vui lòng thực hiện lại sau!',
             });
         }
 
         await relationshipService.deleteFriendRequest(friendRequestId);
 
-        return res.status(httpStatusCode.NO_CONTENT).json();
+        return res.status(httpStatusCode.OK).json();
     }
 
     // [DELETE] /relationships/friend-requests/:userId/user
@@ -145,14 +145,14 @@ class RelationshipController {
         const friendRequest = await relationshipService.getFriendRequestByUserId({ userId: id, receiverId: userId });
 
         if (!friendRequest) {
-            return res.status(relationshipResponse.ALREADY_FRIENDS.status).json({
-                message: relationshipResponse.ALREADY_FRIENDS.message,
+            return res.status(httpStatusCode.BAD_REQUEST).json({
+                message: 'Có lỗi xảy ra, vui lòng thực hiện lại sau!',
             });
         }
 
         await relationshipService.deleteFriendRequest(friendRequest.id);
 
-        return res.status(httpStatusCode.NO_CONTENT).json();
+        return res.status(httpStatusCode.OK).json();
     }
 
     // [GET] /relationships/friends

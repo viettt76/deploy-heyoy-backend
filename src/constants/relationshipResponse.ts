@@ -7,7 +7,7 @@ const relationshipResponse = {
     },
     FRIEND_REQUEST_NOT_FOUND: {
         status: httpStatusCode.NOT_FOUND,
-        message: 'The friend request from {name} no longer exists',
+        message: 'Lời mời kết bạn từ {name} đã không còn',
     },
     ALREADY_FRIENDS: {
         status: httpStatusCode.NOT_FOUND,

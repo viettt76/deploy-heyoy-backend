@@ -13,46 +13,62 @@ const saltRounds = 10;
 
 const postRepository = AppDataSource.getRepository(Post);
 const userRepository = AppDataSource.getRepository(User);
+const imageOfPostRepository = AppDataSource.getRepository(ImageOfPost);
 
 class AdminService {
-    async getPostsNotCensored(page: number): Promise<any[]> {
+    async getPostsNotCensored(page: number): Promise<{ posts: any[]; totalPages: number }> {
         const posts = await postRepository
             .createQueryBuilder('post')
-            .leftJoinAndSelect(ImageOfPost, 'image', 'image.postId = post.id')
-            .innerJoin(User, 'poster', 'poster.id = post.poster')
+            .innerJoinAndSelect('post.poster', 'poster')
             .select([
-                'post.id as postId',
-                'post.posterId as posterId',
-                'poster.firstName as posterFirstName',
-                'poster.lastName as posterLastName',
-                'poster.avatar as posterAvatar',
-                'post.visibilityType as visibilityType',
-                'post.content as content',
-                'post.createdAt as createdAt',
-                "CONCAT('[', GROUP_CONCAT(JSON_OBJECT('id', image.id, 'imageUrl', image.imageUrl)), ']') as images",
+                'post.id',
+                'post.posterId',
+                'poster.firstName',
+                'poster.lastName',
+                'poster.avatar',
+                'post.visibilityType',
+                'post.content',
+                'post.createdAt',
             ])
             .where('post.status != :postStatus', { postStatus: PostStatus.INVALID })
             .offset((page - 1) * pageSize.posts)
             .limit(pageSize.posts)
             .groupBy('post.id')
             .orderBy('post.createdAt', 'DESC')
-            .getRawMany();
+            .getManyAndCount();
 
-        const result = posts.map((post) => ({
-            postId: post.postId,
-            visibilityType: post.visibilityType,
-            content: post.content,
-            createdAt: post.createdAt,
-            posterInfo: {
-                userId: post.posterId,
-                firstName: post.posterFirstName,
-                lastName: post.posterLastName,
-                avatar: post.posterAvatar,
-            },
-            images: JSON.parse(post.images)[0]?.id === null ? [] : JSON.parse(post.images),
-        }));
+        const result = await Promise.all(
+            posts[0].map(async (post) => {
+                const images = await imageOfPostRepository.find({
+                    select: {
+                        id: true,
+                        imageUrl: true,
+                    },
+                    where: {
+                        postId: post.id,
+                    },
+                });
 
-        return result;
+                return {
+                    postId: post.id,
+                    visibilityType: post.visibilityType,
+                    content: post.content,
+                    createdAt: post.createdAt,
+                    posterInfo: {
+                        userId: post.posterId,
+                        firstName: post.poster.firstName,
+                        lastName: post.poster.lastName,
+                        avatar: post.poster.avatar,
+                    },
+                    images,
+                };
+            }),
+        );
+
+        return {
+            posts: result,
+            totalPages: Math.ceil(posts[1] / pageSize.posts),
+        };
     }
 
     async getRejectedPosts(page: number): Promise<any[]> {

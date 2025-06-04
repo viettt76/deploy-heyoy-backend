@@ -284,7 +284,7 @@ class PostController {
     // [DELETE] /posts/bookmark/:id
     async unbookmark(req: Request, res: Response): Promise<any> {
         const { id: userId } = req.userToken as CustomJwtPayload;
-        const { id: postId } = req.body;
+        const { id: postId } = req.params;
 
         await postService.unbookmark({ postId, userId });
 

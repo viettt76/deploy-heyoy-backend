@@ -69,8 +69,7 @@ class PostService {
     async getPosts({ userId, page }: { userId: string; page: number }): Promise<any[]> {
         const posts = await postRepository
             .createQueryBuilder('post')
-            .leftJoinAndSelect(ImageOfPost, 'image', 'image.postId = post.id')
-            .innerJoin(User, 'poster', 'poster.id = post.poster')
+            .innerJoin(User, 'poster', 'poster.id = post.posterId')
             .leftJoin(
                 (qb) =>
                     qb
@@ -91,7 +90,6 @@ class PostService {
                 'post.visibilityType as visibilityType',
                 'post.content as content',
                 'post.createdAt as createdAt',
-                "CONCAT('[', GROUP_CONCAT(JSON_OBJECT('id', image.id, 'imageUrl', image.imageUrl)), ']') as images",
             ])
             .addSelect((qb) => {
                 return qb
@@ -145,6 +143,18 @@ class PostService {
                         },
                     },
                 });
+
+                const images = await imageOfPostRepository.find({
+                    select: {
+                        id: true,
+                        imageUrl: true,
+                        postId: true,
+                    },
+                    where: {
+                        postId: post.postId,
+                    },
+                });
+
                 return {
                     postId: post.postId,
                     visibilityType: post.visibilityType,
@@ -160,7 +170,7 @@ class PostService {
                     currentReactionType: post.currentReactionType,
                     commentsCount: Number(post.commentsCount),
                     reactions,
-                    images: JSON.parse(post.images)[0]?.id === null ? [] : JSON.parse(post.images),
+                    images,
                 };
             }),
         );
@@ -179,8 +189,7 @@ class PostService {
     }): Promise<any[]> {
         const posts = await postRepository
             .createQueryBuilder('post')
-            .leftJoinAndSelect(ImageOfPost, 'image', 'image.postId = post.id')
-            .innerJoin(User, 'poster', 'poster.id = post.poster')
+            .innerJoinAndSelect('post.poster', 'poster')
             .leftJoin(
                 (qb) =>
                     qb
@@ -200,7 +209,6 @@ class PostService {
                 'post.visibilityType as visibilityType',
                 'post.content as content',
                 'post.createdAt as createdAt',
-                "CONCAT('[', GROUP_CONCAT(JSON_OBJECT('id', image.id, 'imageUrl', image.imageUrl)), ']') as images",
             ])
             .addSelect((qb) => {
                 return qb
@@ -236,6 +244,17 @@ class PostService {
                         },
                     },
                 });
+
+                const images = await imageOfPostRepository.find({
+                    select: {
+                        id: true,
+                        imageUrl: true,
+                    },
+                    where: {
+                        postId: post.postId,
+                    },
+                });
+
                 return {
                     postId: post.postId,
                     visibilityType: post.visibilityType,
@@ -250,7 +269,7 @@ class PostService {
                     currentReactionType: post.currentReactionType,
                     commentsCount: Number(post.commentsCount),
                     reactions,
-                    images: JSON.parse(post.images)[0]?.id === null ? [] : JSON.parse(post.images),
+                    images,
                 };
             }),
         );
@@ -527,12 +546,6 @@ class PostService {
             postId,
             userId,
         });
-        // await bookmarkPostRepository
-        //     .createQueryBuilder()
-        //     .delete()
-        //     // .where('(postId = :postId AND userId = :userId)', { postId, userId })
-        //     .where('id = :id', { id: '37c1ee36-eac4-4772-8f88-a6fc22a209e7' })
-        //     .execute();
     }
 
     async deletePost({ postId, userId }: { postId: string; userId: string }): Promise<void> {
@@ -546,8 +559,7 @@ class PostService {
     async getDeletedPosts({ userId, page }: { userId: string; page: number }): Promise<any> {
         const posts = await postRepository
             .createQueryBuilder('post')
-            .leftJoinAndSelect(ImageOfPost, 'image', 'image.postId = post.id')
-            .innerJoin(User, 'poster', 'poster.id = post.poster')
+            .innerJoin(User, 'poster', 'poster.id = post.posterId')
             .select([
                 'post.id as postId',
                 'post.posterId as posterId',
@@ -557,7 +569,6 @@ class PostService {
                 'post.visibilityType as visibilityType',
                 'post.content as content',
                 'post.createdAt as createdAt',
-                "CONCAT('[', GROUP_CONCAT(JSON_OBJECT('id', image.id, 'imageUrl', image.imageUrl)), ']') as images",
             ])
             .where('post.posterId = :userId', { userId })
             .andWhere('post.deletedAt IS NOT NULL')
@@ -568,21 +579,37 @@ class PostService {
             .orderBy('post.createdAt', 'DESC')
             .getRawMany();
 
-        const result = posts.map((post) => ({
-            postId: post.postId,
-            visibilityType: post.visibilityType,
-            content: post.content,
-            createdAt: post.createdAt,
-            posterInfo: {
-                userId: post.posterId,
-                firstName: post.posterFirstName,
-                lastName: post.posterLastName,
-                avatar: post.posterAvatar,
-            },
-            images: JSON.parse(post.images)[0]?.id === null ? [] : JSON.parse(post.images),
-        }));
+        const result = await Promise.all(
+            posts.map(async (post) => {
+                const images = await imageOfPostRepository.find({
+                    select: {
+                        id: true,
+                        imageUrl: true,
+                    },
+                    where: {
+                        postId: post.postId,
+                    },
+                });
 
-        return result;
+                return {
+                    postId: post.postId,
+                    visibilityType: post.visibilityType,
+                    content: post.content,
+                    createdAt: post.createdAt,
+                    posterInfo: {
+                        userId: post.posterId,
+                        firstName: post.posterFirstName,
+                        lastName: post.posterLastName,
+                        avatar: post.posterAvatar,
+                    },
+                    images,
+                };
+            }),
+        );
+
+        return {
+            posts: result,
+        };
     }
 
     async recoverPost({ postId, userId }: { postId: string; userId: string }): Promise<void> {
@@ -600,8 +627,7 @@ class PostService {
         const posts = await bookmarkPostRepository
             .createQueryBuilder('bookmark')
             .innerJoin(Post, 'post', 'bookmark.postId = post.id')
-            .leftJoinAndSelect(ImageOfPost, 'image', 'image.postId = post.id')
-            .innerJoin(User, 'poster', 'poster.id = post.poster')
+            .innerJoin(User, 'poster', 'poster.id = post.posterId')
             .leftJoin(
                 (qb) =>
                     qb
@@ -621,7 +647,6 @@ class PostService {
                 'post.visibilityType as visibilityType',
                 'post.content as content',
                 'post.createdAt as createdAt',
-                "CONCAT('[', GROUP_CONCAT(JSON_OBJECT('id', image.id, 'imageUrl', image.imageUrl)), ']') as images",
             ])
             .addSelect((qb) => {
                 return qb
@@ -657,6 +682,17 @@ class PostService {
                         },
                     },
                 });
+
+                const images = await imageOfPostRepository.find({
+                    select: {
+                        id: true,
+                        imageUrl: true,
+                    },
+                    where: {
+                        postId: post.postId,
+                    },
+                });
+
                 return {
                     postId: post.postId,
                     visibilityType: post.visibilityType,
@@ -671,12 +707,14 @@ class PostService {
                     currentReactionType: post.currentReactionType,
                     commentsCount: Number(post.commentsCount),
                     reactions,
-                    images: JSON.parse(post.images)[0]?.id === null ? [] : JSON.parse(post.images),
+                    images,
                 };
             }),
         );
 
-        return result;
+        return {
+            posts: result,
+        };
     }
 }
 
