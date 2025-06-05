@@ -71,7 +71,9 @@ class AdminService {
         };
     }
 
-    async getRejectedPosts(page: number): Promise<any[]> {
+    async getRejectedPosts(page: number): Promise<{
+        posts: any[];
+    }> {
         const posts = await postRepository
             .createQueryBuilder('post')
             .leftJoinAndSelect(ImageOfPost, 'image', 'image.postId = post.id')
@@ -108,7 +110,9 @@ class AdminService {
             images: JSON.parse(post.images)[0]?.id === null ? [] : JSON.parse(post.images),
         }));
 
-        return result;
+        return {
+            posts: result,
+        };
     }
 
     async updatePostStatus({ postId, status }: { postId: string; status: PostStatus }): Promise<void> {
