@@ -64,6 +64,7 @@ class UserService {
             .innerJoin('image.post', 'post')
             .where('post.posterId = :userId', { userId })
             .groupBy('image.imageUrl')
+            .addGroupBy('image.postId')
             .getRawMany();
     }
 
